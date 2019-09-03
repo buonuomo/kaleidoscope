@@ -18,7 +18,7 @@ lexer = Tok.makeTokenParser language
 integer :: Parser Integer
 integer = Tok.integer lexer
 
-float :: Parser Float
+float :: Parser Double
 float = Tok.float lexer
 
 parens :: Parser a -> Parser a

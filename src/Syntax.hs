@@ -7,7 +7,7 @@ data Expr = Float Double
           | Var String
           | Call Name [Expr]
           | Function Name [Expr] Expr
-          | Extern [Name]
+          | Extern Name [Expr]
           deriving (Show, Eq, Ord)
 
 data Op = Plus

@@ -21,12 +21,15 @@ description:         Please see the README on GitHub at <https://github.com/buon
 
 dependencies:
 - base >= 4.7 && < 5
+- parsec
+- mtl
+- haskeline
 
 library:
   source-dirs: src
 
 executables:
-  kaleidoscope-exe:
+  compiler:
     main:                Main.hs
     source-dirs:         src
     ghc-options:
