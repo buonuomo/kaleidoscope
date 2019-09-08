@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 77dcae426325a4ccdcec5ce299c95b63882047d14372cd136f8f20a0a108caf7
+-- hash: a8cf111955873fb2c7035705683d76e96efe11d0d5408a727f3bd34c97daf0d6
 
 name:           kaleidoscope
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Codegen
       Lexer
       Main
       Parser
@@ -37,7 +38,10 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , containers
     , haskeline
+    , llvm-hs
+    , llvm-hs-pure
     , mtl
     , parsec
   default-language: Haskell2010
@@ -45,6 +49,7 @@ library
 executable compiler
   main-is: Main.hs
   other-modules:
+      Codegen
       Lexer
       Parser
       Syntax
@@ -54,8 +59,11 @@ executable compiler
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , haskeline
     , kaleidoscope
+    , llvm-hs
+    , llvm-hs-pure
     , mtl
     , parsec
   default-language: Haskell2010
@@ -70,8 +78,11 @@ test-suite kaleidoscope-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , haskeline
     , kaleidoscope
+    , llvm-hs
+    , llvm-hs-pure
     , mtl
     , parsec
   default-language: Haskell2010
