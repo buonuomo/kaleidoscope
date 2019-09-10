@@ -6,8 +6,8 @@ data Expr = Float Double
           | BinOp Op Expr Expr
           | Var String
           | Call Name [Expr]
-          | Function Name [Expr] Expr
-          | Extern Name [Expr]
+          | Function Name [Name] Expr
+          | Extern Name [Name]
           deriving (Show, Eq, Ord)
 
 data Op = Plus

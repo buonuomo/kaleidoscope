@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Codegen where
 
@@ -10,6 +11,7 @@ import qualified Data.Map as Map
 import           Data.String
 
 import           LLVM.AST as AST
+import qualified LLVM.AST.CallingConvention as CC
 import qualified LLVM.AST.Constant as C
 import           LLVM.AST.Global
 import           LLVM.AST.Linkage
@@ -39,6 +41,12 @@ data BlockState = BlockState
 
 newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
   deriving (Functor, Applicative, Monad, MonadState CodegenState)
+
+execCodegen :: Codegen a -> CodegenState
+execCodegen codegen = execState (runCodegen codegen) emptyCodegenState
+
+emptyCodegenState :: CodegenState
+emptyCodegenState = CodegenState (mkName entryBlockName) Map.empty [] 1 0 Map.empty
 
 newtype LLVM a = LLVM (State AST.Module a)
   deriving (Functor, Applicative, Monad, MonadState AST.Module)
@@ -75,6 +83,19 @@ extern retType label args = addDefn $
 
 
 -- Block manipulation
+
+-- TODO: maybe sort nicely?
+createBlocks :: CodegenState -> [BasicBlock]
+createBlocks = map createBlock . Map.toList . blocks
+
+createBlock :: (Name, BlockState) -> BasicBlock
+createBlock (bname, BlockState{..}) = 
+  case term of
+    Nothing -> error $ "createBlock: missing terminator in block " ++ show bname
+    Just t -> BasicBlock bname stack t
+
+entryBlockName :: String
+entryBlockName = "entry"
 
 entry :: Codegen Name
 entry = gets currentBlock
@@ -149,3 +170,59 @@ getvar var = do
   case lookup var locals of
     Nothing -> error $ "Local variable not in scope: " ++ var
     Just op -> return op
+
+-- | push an instruction onto the current block's stack and return a local
+-- operator as a reference to this instruction
+instr :: Instruction -> Codegen Operand
+instr ins = do
+  new <- fresh
+  let name = UnName new
+      named = name := ins
+  curr <- current
+  modifyBlock $ curr { stack = named : (stack curr) }
+  return $ local name
+
+terminator :: Named Terminator -> Codegen (Named Terminator)
+terminator trm = do
+  curr <- current
+  modifyBlock $ curr { term = Just trm }
+  return trm
+
+-- | binary operators
+fadd :: Operand -> Operand -> Codegen Operand
+fadd a b = instr $ FAdd noFastMathFlags a b []
+
+fsub :: Operand -> Operand -> Codegen Operand
+fsub a b = instr $ FSub noFastMathFlags a b []
+
+fmul :: Operand -> Operand -> Codegen Operand
+fmul a b = instr $ FMul noFastMathFlags a b []
+
+fdiv :: Operand -> Operand -> Codegen Operand
+fdiv a b = instr $ FDiv noFastMathFlags a b []
+
+-- | terminators
+br :: Name -> Codegen (Named Terminator)
+br name = terminator $ Do $ Br name []
+
+cbr :: Operand -> Name -> Name -> Codegen (Named Terminator)
+cbr cond tr fl = terminator $ Do $ CondBr cond tr fl []
+
+ret :: Operand -> Codegen (Named Terminator)
+ret val = terminator $ Do $ Ret (Just val) []
+
+-- | effectful instructions
+
+-- | call a function with list of parameters
+call :: Operand -> [Operand] -> Codegen Operand
+call fun args = instr $ Call Nothing CC.C [] (Right fun) [(arg,[]) | arg <- args] [] []
+
+-- | allocate some memory
+alloca :: Type -> Codegen Operand
+alloca ty = instr $ Alloca ty Nothing 0 []
+
+store :: Operand -> Operand -> Codegen Operand
+store ptr val = instr $ Store False ptr val Nothing 0 []
+
+load :: Operand -> Codegen Operand
+load ptr = instr $ Load False ptr Nothing 0 []

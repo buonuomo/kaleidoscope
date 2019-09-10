@@ -63,13 +63,18 @@ int :: Parser Expr
 int = (Float . fromInteger) <$> integer
 
 extern :: Parser Expr
-extern = Extern <$> (reserved "extern" *> identifier) <*> parens (many variable)
+extern = Extern 
+      <$> (reserved "extern" *> identifier) 
+      <*> parens (many identifier)
 
 variable :: Parser Expr
 variable = Var <$> identifier 
 
 function :: Parser Expr
-function = Function <$> (reserved "def" *> identifier) <*> parens (many variable) <*> expr
+function = Function 
+        <$> (reserved "def" *> identifier) 
+        <*> parens (many identifier) 
+        <*> expr
 
 call :: Parser Expr
 call = Call <$> identifier <*> parens (commaSep expr)

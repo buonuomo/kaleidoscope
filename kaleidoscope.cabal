@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a8cf111955873fb2c7035705683d76e96efe11d0d5408a727f3bd34c97daf0d6
+-- hash: 91ba184379042cbe01e309b46c6a5125381bc77dde5777f4a8fd2091e2c97ea0
 
 name:           kaleidoscope
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Codegen
+      Emit
       Lexer
       Main
       Parser
@@ -50,6 +51,7 @@ executable compiler
   main-is: Main.hs
   other-modules:
       Codegen
+      Emit
       Lexer
       Parser
       Syntax
