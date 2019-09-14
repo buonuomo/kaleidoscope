@@ -15,4 +15,7 @@ data Op = Plus
         | Times
         | Divide
         | LessThan
+        | GreaterThan
+        | LessEquals
+        | GreaterEquals
         deriving (Show, Eq, Ord)

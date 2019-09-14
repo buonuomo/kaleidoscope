@@ -231,8 +231,21 @@ fmul a b = instr $ FMul noFastMathFlags a b []
 fdiv :: Operand -> Operand -> Codegen Operand
 fdiv a b = instr $ FDiv noFastMathFlags a b []
 
+-- | comparisons
+fcmp :: FPP.FloatingPointPredicate -> Operand -> Operand -> Codegen Operand
+fcmp fpp a b = instr (FCmp fpp a b []) >>= uitofp double
+
 flt :: Operand -> Operand -> Codegen Operand
-flt a b = instr (FCmp FPP.ULT a b []) >>= uitofp double
+flt = fcmp FPP.ULT
+
+fgt :: Operand -> Operand -> Codegen Operand
+fgt = fcmp FPP.UGT
+
+fge :: Operand -> Operand -> Codegen Operand
+fge = fcmp FPP.UGE
+
+fle :: Operand -> Operand -> Codegen Operand
+fle = fcmp FPP.ULE
 
 -- | terminators
 br :: Name -> Codegen (Named Terminator)

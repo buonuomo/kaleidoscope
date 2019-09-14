@@ -40,6 +40,8 @@ expr = Ex.buildExpressionParser table term
 table :: Ex.OperatorTable String () Identity Expr
 table = [[ binary "*" Times Ex.AssocLeft, binary "/" Divide Ex.AssocLeft]
         ,[ binary "+" Plus Ex.AssocLeft, binary "-" Minus Ex.AssocLeft]
+        ,[ binary "<" LessThan Ex.AssocLeft, binary ">" GreaterThan Ex.AssocLeft
+         , binary ">=" GreaterEquals Ex.AssocLeft, binary "<=" LessEquals Ex.AssocLeft]
         ]
 
 -- | convenience function for declaring binary operator

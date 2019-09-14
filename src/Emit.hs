@@ -48,6 +48,9 @@ cgen (S.BinOp S.Minus a b) = bind2 fsub (cgen a) (cgen b)
 cgen (S.BinOp S.Times a b) = bind2 fmul (cgen a) (cgen b)
 cgen (S.BinOp S.Divide a b) = bind2 fdiv (cgen a) (cgen b)
 cgen (S.BinOp S.LessThan a b) = bind2 flt (cgen a) (cgen b)
+cgen (S.BinOp S.GreaterThan a b) = bind2 fgt (cgen a) (cgen b)
+cgen (S.BinOp S.GreaterEquals a b) = bind2 fge (cgen a) (cgen b)
+cgen (S.BinOp S.LessEquals a b) = bind2 fle (cgen a) (cgen b)
 
 cgen (S.Var str) = getvar str >>= load
 
