@@ -24,6 +24,7 @@ dependencies:
 - parsec
 - mtl
 - haskeline
+- bytestring
 - containers
 - llvm-hs-pure
 - llvm-hs

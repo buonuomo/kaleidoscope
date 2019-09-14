@@ -6,13 +6,17 @@ module Codegen where
 
 import Control.Monad.State
 
+import           Data.Ord (comparing)
+import           Data.List (sortBy)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.String
 
 import           LLVM.AST as AST
+import qualified LLVM.AST.AddrSpace as AS
 import qualified LLVM.AST.CallingConvention as CC
 import qualified LLVM.AST.Constant as C
+import qualified LLVM.AST.FloatingPointPredicate as FPP
 import           LLVM.AST.Global
 import           LLVM.AST.Linkage
 import qualified LLVM.Prelude as LP
@@ -84,15 +88,18 @@ extern retType label args = addDefn $
 
 -- Block manipulation
 
--- TODO: maybe sort nicely?
+-- | Create a list of basic blocks sorted by index from a codegen state
 createBlocks :: CodegenState -> [BasicBlock]
-createBlocks = map createBlock . Map.toList . blocks
+createBlocks = map createBlock 
+             . sortBy (comparing (idx . snd)) 
+             . Map.toList 
+             . blocks
 
 createBlock :: (Name, BlockState) -> BasicBlock
 createBlock (bname, BlockState{..}) = 
   case term of
     Nothing -> error $ "createBlock: missing terminator in block " ++ show bname
-    Just t -> BasicBlock bname stack t
+    Just t -> BasicBlock bname (reverse stack) t
 
 entryBlockName :: String
 entryBlockName = "entry"
@@ -157,13 +164,29 @@ uniqueName nm nms =
 local :: Name -> Operand
 local = LocalReference double
 
-externf :: Name -> Operand
-externf = ConstantOperand . C.GlobalReference double
+-- external function with n arguments
+externf :: Int -> Name -> Operand
+externf n = ConstantOperand . C.GlobalReference (functionPtr n)
 
+functionPtr :: Int -> Type
+functionPtr n = PointerType
+  { pointerReferent = functionType n
+  , pointerAddrSpace = AS.AddrSpace 0
+  }
+
+functionType :: Int -> Type
+functionType n = FunctionType
+  { resultType = double
+  , argumentTypes = replicate n double
+  , isVarArg = False
+  }
+
+-- | assign a user defined name to an entry in the symbol table
 assign :: String -> Operand -> Codegen ()
 assign var x = do
   modify $ \s -> s { symtab = (var, x) : (symtab s) }
 
+-- | get some entry from the symbol table
 getvar :: String -> Codegen Operand
 getvar var = do
   locals <- gets symtab
@@ -181,6 +204,13 @@ instr ins = do
   curr <- current
   modifyBlock $ curr { stack = named : (stack curr) }
   return $ local name
+
+-- | instructions of type void cannot be named, so we must treat them
+-- differently
+voidInstr :: Instruction -> Codegen ()
+voidInstr ins = do
+  curr <- current
+  modifyBlock $ curr { stack = Do ins : (stack curr) }
 
 terminator :: Named Terminator -> Codegen (Named Terminator)
 terminator trm = do
@@ -200,6 +230,9 @@ fmul a b = instr $ FMul noFastMathFlags a b []
 
 fdiv :: Operand -> Operand -> Codegen Operand
 fdiv a b = instr $ FDiv noFastMathFlags a b []
+
+flt :: Operand -> Operand -> Codegen Operand
+flt a b = instr (FCmp FPP.ULT a b []) >>= uitofp double
 
 -- | terminators
 br :: Name -> Codegen (Named Terminator)
@@ -221,8 +254,12 @@ call fun args = instr $ Call Nothing CC.C [] (Right fun) [(arg,[]) | arg <- args
 alloca :: Type -> Codegen Operand
 alloca ty = instr $ Alloca ty Nothing 0 []
 
-store :: Operand -> Operand -> Codegen Operand
-store ptr val = instr $ Store False ptr val Nothing 0 []
+store :: Operand -> Operand -> Codegen ()
+store ptr val = voidInstr $ Store False ptr val Nothing 0 []
 
 load :: Operand -> Codegen Operand
 load ptr = instr $ Load False ptr Nothing 0 []
+
+-- | cast some int to a float type
+uitofp :: Type -> Operand -> Codegen Operand
+uitofp ty int = instr $ UIToFP int ty []
