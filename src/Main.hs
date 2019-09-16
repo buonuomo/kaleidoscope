@@ -37,13 +37,3 @@ process input mod =
       return mod
 
 
-
-codegen :: AST.Module -> [S.Expr] -> IO AST.Module
-codegen mod fns = withContext $ \context ->
-  withModuleFromAST context newast $ \m -> do
-    llstr <- moduleLLVMAssembly m
-    B.putStrLn llstr
-    return newast
-  where
-    modn = mapM codegenTop fns
-    newast = runLLVM mod modn

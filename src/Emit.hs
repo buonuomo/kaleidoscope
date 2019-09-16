@@ -1,6 +1,7 @@
 module Emit where
 
 import Codegen
+import JIT
 import qualified Syntax as S
 
 import Control.Monad
@@ -9,6 +10,12 @@ import LLVM.AST as AST
 import qualified LLVM.AST.Constant as C
 import qualified LLVM.AST.Float as F
 
+-- | actually performs IO with llvm to generate llvm internal module
+codegen :: AST.Module -> [S.Expr] -> IO AST.Module
+codegen mod fns = runJIT newast >>= return
+  where
+    modn = mapM codegenTop fns
+    newast = runLLVM mod modn
 
 codegenTop :: S.Expr -> LLVM ()
 codegenTop (S.Function name args body) = do
@@ -19,6 +26,9 @@ codegenTop (S.Function name args body) = do
         entry <- addBlock entryBlockName
         setBlock entry
         forM args $ \arg -> do
+          -- I wonder if it's really necessary to allocate these args
+          -- It has to do with how we handle variables, esp. load
+          -- maybe it will optimize out
           var <- alloca double
           store var (local (mkName arg))
           assign arg var
